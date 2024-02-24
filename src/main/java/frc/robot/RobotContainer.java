@@ -7,8 +7,11 @@ package frc.robot;
 import frc.robot.Constants.k_CONTROLLERS;
 import frc.robot.commands.AutoDrvStraight;
 import frc.robot.commands.TeleopDrive;
+import frc.robot.commands.complexarm;
+import frc.robot.commands.simplearmdrive;
+import frc.robot.commands.simplewrist;
+import frc.robot.subsystems.Arm;
 import frc.robot.subsystems.Drive;
-
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
@@ -23,7 +26,7 @@ public class RobotContainer {
   // The robot's subsystems and commands are defined here...
   //#region Declare Subsystems
   private final Drive sys_Drive = new Drive();
-
+  private final Arm sys_Arm = new Arm();
   //#endregion
   
   //Commands
@@ -38,9 +41,10 @@ public class RobotContainer {
 
     // Default Drive Command
     sys_Drive.setDefaultCommand(new TeleopDrive(sys_Drive,
-        m_driverController::getLeftTriggerAxis,
         m_driverController::getRightTriggerAxis,
+        m_driverController::getLeftTriggerAxis,
         m_driverController::getRightX));
+
 
 
     // Configure the trigger bindings
@@ -58,11 +62,19 @@ public class RobotContainer {
    */
   private void configureBindings() {
     // Schedule `ExampleCommand` when `exampleCondition` changes to `true`
-    
-
+    //m_driverController.x().whileTrue(new simplearmdrive(sys_Arm,0.1));
+    m_driverController.a().whileTrue(new simplearmdrive(sys_Arm,-0.1));
+    m_driverController.y().whileTrue(new simplewrist(sys_Arm,0.2));
+    m_driverController.b().whileTrue(new simplewrist(sys_Arm,-0.2));
     // Schedule `exampleMethodCommand` when the Xbox controller's B button is pressed,
     // cancelling on release.
+
+    m_driverController.x().whileTrue(new complexarm(sys_Arm,45));
     
+    
+    //m_driverController.x().whileTrue(new complexarm(sys_Arm,10));
+
+  
   }
 
   /**

@@ -12,6 +12,7 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.k_DRIVE;
 
@@ -96,6 +97,9 @@ public class Drive extends SubsystemBase {
     r_position = f500_fr_drive.getPosition().getValue();
     l_velocity = f500_fl_drive.getVelocity().getValue();
     r_velocity = f500_fr_drive.getVelocity().getValue();
+    SmartDashboard.putNumber("Left Velocity", l_velocity);
+    SmartDashboard.putNumber("Right Velocity", r_velocity);
+
   }
 
   public void RadiusDrive(double pwr, double turn){

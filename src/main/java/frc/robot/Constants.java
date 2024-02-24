@@ -32,7 +32,7 @@ public final class Constants {
     public static final double TRACK_WIDTH = 25.0/12.0;       // Chassis track width in feet
     public static final double FT_TO_MROT = GEAR_RATIO / (Math.PI * WHEEL_DIAMETER);             // Motor rotations in one foot of travel
     public static final double SPEED_EXP = 2;
-    public static final double TURN_EXP = 2.5;
+    public static final double TURN_EXP = 3;
     // Calibration Values
     public static final double MAX_SPEED = 15.0;              // Max speed in ft/s (free speed max @ 10.75 ratio & 6in wheels is 15.6 ft/s)
       // Max Speed converted to Motor Speed rotations per second
@@ -59,20 +59,28 @@ public final class Constants {
     public static final int MotorID_L = 5;
 
     // Postion PID constants
-    public static final double KP_0 = 0;
+    public static final double KP_0 = 50.0;   // 2.40 should be equavalent to last year's kP, might want to start low and work up to this
     public static final double KI_0 = 0;
     public static final double KD_0 = 0;
-    public static final double KF_0 = 0;
+    public static final double KF_0 = 0.8;    //Gravity Feedforward set in Arm subsystem, increase slowly (adds %output to counter gravity)
 
     // Arm Mechanics
-    public static final double M2P = 24/16;     // Gear ratio motor to planetary input
-    public static final double BB_GR = 64;      // Gear ratio of BaneBots Planetary
-    public static final double FGR = 2;         // Gear ratio of Planetary output to Arm
+    public static final double M2P = 24.0/16.0;     // Gear ratio motor to planetary input
+    public static final double BB_GR = 64.0;      // Gear ratio of BaneBots Planetary
+    public static final double FGR = 2.0;         // Gear ratio of Planetary output to Arm
+    public static final double TGR = M2P * BB_GR * FGR;
     public static final double DEG2MROT = M2P * BB_GR * FGR / 360;    //  Motor Rotations per deg of Arm rotation
     public static final double INIT_POS = 0;    // Initial position of the arm
 
     public static final double CURRENT_LIMIT_NORMAL = 20;
     public static final double CURRENT_LIMIT_CLIMB = 50;
+
+    // Motion Magic Settings
+    public static final double ARM_CRUISE = 0.5;  // rot/s  - Mechanism rotations?
+    public static final double ARM_CRUISE_TIME = 0.5;  // seconds to reach Cruise Speed
+    public static final double ARM_ACCEL = ARM_CRUISE / (ARM_CRUISE_TIME);  
+    public static final double ARM_ACCEL_TIME = 0.1;  // seconds to reach Acceleration
+    public static final double ARM_JERK = ARM_ACCEL / (ARM_ACCEL_TIME);  
   }
 
   public static class k_WRIST {
@@ -83,7 +91,7 @@ public final class Constants {
     public static final int ENCODER_CNT = 4096;
     public static final double WR_GR = 2.0;              // Gear Ratio between VP Output and intake hex shaft
     public static final double WRIST_DEG2TIC = WR_GR * ENCODER_CNT / 360.0;        // Motor ticks per degrees of Wrist rotation
-    public static final double INIT_POS = 120 * WRIST_DEG2TIC;    // 0 ref is inline with Arms (or deployed state)
+    public static final double INIT_POS = 180 * WRIST_DEG2TIC;    // 0 ref is inline with Arms (or deployed state)
     
     // PID Constants
     public static final double KP_0 = 1;

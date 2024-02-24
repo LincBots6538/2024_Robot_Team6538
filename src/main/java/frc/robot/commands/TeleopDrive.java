@@ -7,16 +7,16 @@ package frc.robot.commands;
 import java.util.function.DoubleSupplier;
 
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants.k_CONTROLLERS;
-import frc.robot.Constants.k_DRIVE;
 import frc.robot.subsystems.Drive;
 
 public class TeleopDrive extends Command {
   /** Creates a new TeleopDrive. */
   private final Drive sys_Drive;
   private DoubleSupplier pwr_f, pwr_r, turn;
-  private double speed, angle, radius, dir, turn_db;
+  private double speed, turn_db;
 
   public TeleopDrive(Drive subsystem, DoubleSupplier pwr_axis_f,DoubleSupplier pwr_axis_r, DoubleSupplier turn_axis) {
     // Use addRequirements() here to declare subsystem dependencies.
@@ -40,20 +40,10 @@ public class TeleopDrive extends Command {
      // squaring the inputs 
       double speed_f = Math.signum(speed)*Math.pow(Math.abs(speed), 2);
       double turn_f = Math.signum(turn_db)*Math.pow(Math.abs(turn_db), 2);
-    //  dir = Math.signum(turn_db);
-
-    // if(dir == 0){
-    // radius = k_DRIVE.NOM_RADIUS * (1/turn_db -(1 *dir));
-    // }
-    // else{
-    //   radius = k_DRIVE.NOM_RADIUS * (1/turn_db -(1 *dir));
-    // }
-
-    // sys_Drive.RadiusDrive(speed, radius, dir);
     
     sys_Drive.holdendrive(speed_f, turn_f);
     
-    
+   SmartDashboard.putNumber("speed", speed_f);
 
 
   }

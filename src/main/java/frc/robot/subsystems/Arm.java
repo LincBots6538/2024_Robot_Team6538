@@ -10,11 +10,14 @@ import com.ctre.phoenix.motorcontrol.TalonSRXControlMode;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
-import com.ctre.phoenix6.controls.PositionVoltage;
+import com.ctre.phoenix6.controls.MotionMagicVoltage;
+//import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.k_ARM;
 import frc.robot.Constants.k_WRIST;
@@ -26,33 +29,61 @@ public class Arm extends SubsystemBase {
 
   private final TalonSRX p775_Wrist = new TalonSRX(k_WRIST.MotorID_775);
 
-  private PositionVoltage positionControl = new PositionVoltage(0, 0, false, 0, 0, false, false, false);
-  
+  //private PositionVoltage positionControl = new PositionVoltage(0, 0, false, 0, 0, false, false, false);
+  private MotionMagicVoltage arm_MMconfig = new MotionMagicVoltage(0, false, 0, 0, false, false, false);
+
+
   public Arm() {
     
     // Set up Arm Motor
     TalonFXConfiguration leftConfig = new TalonFXConfiguration();
     TalonFXConfiguration rightConfig = new TalonFXConfiguration();
 
+    // Set Direction for positive input
     leftConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
     rightConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
     
+    // Current Limiting
     leftConfig.CurrentLimits.StatorCurrentLimit = k_ARM.CURRENT_LIMIT_NORMAL;
     leftConfig.CurrentLimits.StatorCurrentLimitEnable = true;
 
     rightConfig.CurrentLimits.StatorCurrentLimit = k_ARM.CURRENT_LIMIT_NORMAL;
     rightConfig.CurrentLimits.StatorCurrentLimitEnable = true;
+
+    // PID Coefficients
+    leftConfig.Slot0.kP = k_ARM.KP_0;
+    leftConfig.Slot0.kI = k_ARM.KI_0;
+    leftConfig.Slot0.kD = k_ARM.KD_0;
+  
+
+    // Gravity Feed Forward
+    leftConfig.Slot0.kG = k_ARM.KF_0;
+    leftConfig.Slot0.GravityType = GravityTypeValue.Arm_Cosine;
+    leftConfig.Feedback.SensorToMechanismRatio = k_ARM.TGR;
     
+
+
+    // Set motor Neutral Mode - Coast/Brake    
     f500_Left.setNeutralMode(NeutralModeValue.Brake);
     f500_Right.setNeutralMode(NeutralModeValue.Brake);
+    // SmartDashboard.putString("description",f500_Left.getDescription());
+   
+    // Motion Magic Setup
+    leftConfig.MotionMagic.MotionMagicCruiseVelocity = k_ARM.ARM_CRUISE;  // 1 second to 90 deg
+    leftConfig.MotionMagic.MotionMagicAcceleration = k_ARM.ARM_ACCEL;     // Time to reach velocity
+    leftConfig.MotionMagic.MotionMagicJerk = k_ARM.ARM_JERK;              // Time to reach accel
 
+    
+   
+    // Apply Configurations
     f500_Left.getConfigurator().apply(leftConfig);
     f500_Right.getConfigurator().apply(rightConfig);
 
+    // Set Right to Follow Left
     f500_Right.setControl(new Follower(f500_Left.getDeviceID(), true));
 
+    // Define Starting Position
     f500_Left.setPosition(k_ARM.INIT_POS);
-
     
 
     // Set up Wrist Motor
@@ -60,7 +91,7 @@ public class Arm extends SubsystemBase {
     p775_Wrist.setNeutralMode(NeutralMode.Brake);
     p775_Wrist.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);
     p775_Wrist.setSensorPhase(true);   // Set so positive output drives increasing sensor values
-    p775_Wrist.setInverted(true);           // Set so positive movement is up from deployed state
+    p775_Wrist.setInverted(false);           // Set so positive movement is up from deployed state
 
     // PID values
     p775_Wrist.config_kP(0, k_WRIST.KP_0);
@@ -68,6 +99,7 @@ public class Arm extends SubsystemBase {
     p775_Wrist.config_kD(0, k_WRIST.KD_0);
     p775_Wrist.config_kF(0, k_WRIST.KF_0);
 
+    // PID Allowable Error & Peak Output limit
     p775_Wrist.configAllowableClosedloopError(0, k_WRIST.PID_ERR);
     p775_Wrist.configClosedLoopPeakOutput(0, k_WRIST.PID_OUTPUT);
 
@@ -88,14 +120,20 @@ public class Arm extends SubsystemBase {
   @Override
   public void periodic() {
     // This method will be called once per scheduler run
+    double pos=f500_Left.getPosition().getValue();
+    double wrist_pos=p775_Wrist.getSelectedSensorPosition();
+    SmartDashboard.putNumber("armposition",pos*360.0);
+    SmartDashboard.putNumber("wrist position",wrist_pos/k_WRIST.WRIST_DEG2TIC);
   }
 
   public void Move2Angle(double angle){
-    f500_Left.setControl(positionControl.withPosition(angle * k_ARM.DEG2MROT));
+    //f500_Left.setControl(positionControl.withPosition(angle/360.0));
+    f500_Left.setControl(arm_MMconfig.withPosition(angle/360.0));
   }
 
   public void MoveWrist(double angle){
-    p775_Wrist.set(TalonSRXControlMode.Position, angle * k_WRIST.WRIST_DEG2TIC);
+    p775_Wrist.set(TalonSRXControlMode.MotionMagic, angle * k_WRIST.WRIST_DEG2TIC);
+    
   }
 
   public void wristDC(double pctOutput){
@@ -104,5 +142,8 @@ public class Arm extends SubsystemBase {
 
   public void shoulderDC(double pctOutput){
     f500_Left.set(pctOutput);
+  }
+  public void holden(){
+    //do nothing
   }
 }
