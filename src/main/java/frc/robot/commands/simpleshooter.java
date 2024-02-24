@@ -4,37 +4,30 @@
 
 package frc.robot.commands;
 
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.robot.subsystems.Arm;
+import frc.robot.subsystems.shooter;
 
-public class complexarm extends Command {
-  /** Creates a new complexarm. */
+public class simpleshooter extends Command {
+  /** Creates a new simpleshooter. */
+  private shooter voltorb;
+  private double calculus;
+  
+  public simpleshooter(shooter subsystem, double  speed) {
+   
+   voltorb= subsystem;
+   calculus= speed;
 
-  private final  Arm sys_arm;
-  private final  double degree;
-
-  public complexarm(Arm subsystem, double angle) {
-
-    sys_arm=subsystem;
-    degree=angle;
-  
-  
-   SmartDashboard.putNumber("angle", angle);
-  
-  
-    // Use addRequirements() here to declare subsystem dependencies.
-  
-    addRequirements(sys_arm); 
+   
+   
+   addRequirements(subsystem);
+   // Use addRequirements() here to declare subsystem dependencies.
   }
-
 
   // Called when the command is initially scheduled.
   @Override
   public void initialize() {
 
-   sys_arm.Move2Angle(degree);
-
+voltorb.set_speed(calculus);
 
   }
 
@@ -45,20 +38,14 @@ public class complexarm extends Command {
   // Called once the command ends or is interrupted.
   @Override
   public void end(boolean interrupted) {
-  //sys_arm.Move2Angle(0);
-  //sys_arm.Move2Angle(degree);
+
+voltorb.set_speed(0);
 
   }
 
   // Returns true when the command should end.
   @Override
   public boolean isFinished() {
-    return true;
+    return false;
   }
-
-   
-
-
-
-
 }

@@ -6,12 +6,18 @@ package frc.robot;
 
 import frc.robot.Constants.k_CONTROLLERS;
 import frc.robot.commands.AutoDrvStraight;
+import frc.robot.commands.SetArmPosistions;
 import frc.robot.commands.TeleopDrive;
 import frc.robot.commands.complexarm;
+import frc.robot.commands.complexwrist;
+import frc.robot.commands.roller;
 import frc.robot.commands.simplearmdrive;
+import frc.robot.commands.simpleshooter;
 import frc.robot.commands.simplewrist;
 import frc.robot.subsystems.Arm;
 import frc.robot.subsystems.Drive;
+import frc.robot.subsystems.shooter;
+import frc.robot.subsystems.Intake;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
@@ -27,6 +33,8 @@ public class RobotContainer {
   //#region Declare Subsystems
   private final Drive sys_Drive = new Drive();
   private final Arm sys_Arm = new Arm();
+  private final shooter sys_Shooter = new shooter();
+  private final Intake sysIntake = new Intake();
   //#endregion
   
   //Commands
@@ -63,18 +71,26 @@ public class RobotContainer {
   private void configureBindings() {
     // Schedule `ExampleCommand` when `exampleCondition` changes to `true`
     //m_driverController.x().whileTrue(new simplearmdrive(sys_Arm,0.1));
-    m_driverController.a().whileTrue(new simplearmdrive(sys_Arm,-0.1));
-    m_driverController.y().whileTrue(new simplewrist(sys_Arm,0.2));
-    m_driverController.b().whileTrue(new simplewrist(sys_Arm,-0.2));
+    //m_driverController.a().whileTrue(new simplearmdrive(sys_Arm,-0.1));
+    //m_driverController.y().whileTrue(new simplewrist(sys_Arm,0.2));
+    //m_driverController.b().whileTrue(new simplewrist(sys_Arm,-0.2));
     // Schedule `exampleMethodCommand` when the Xbox controller's B button is pressed,
     // cancelling on release.
 
-    m_driverController.x().whileTrue(new complexarm(sys_Arm,45));
-    
+    //m_driverController.x().whileTrue(new complexarm(sys_Arm,45));
+    //m_driverController.leftBumper().whileTrue(new complexwrist(sys_Arm,90));
     
     //m_driverController.x().whileTrue(new complexarm(sys_Arm,10));
+    // old button bindings might be possibly used for seperate manipulator controller 
+    
 
-  
+    m_driverController.a().onTrue(new SetArmPosistions(sys_Arm, 0)); // go to home position
+    m_driverController.x().onTrue(new SetArmPosistions(sys_Arm, 1)); // go to intake position
+    m_driverController.y().onTrue(new SetArmPosistions(sys_Arm,2)); //  go to speaker position 
+    m_driverController.b().onTrue(new SetArmPosistions(sys_Arm,3)); // go to amp position 
+    m_driverController.back().onTrue(new SetArmPosistions(sys_Arm,4)); // go to climb position
+    m_driverController.rightBumper().whileTrue(new simpleshooter(sys_Shooter, -10000));
+    m_driverController.leftBumper().whileTrue(new roller(sysIntake,-0.35));
   }
 
   /**

@@ -4,37 +4,30 @@
 
 package frc.robot.commands;
 
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.robot.subsystems.Arm;
+import frc.robot.subsystems.Intake;
 
-public class complexarm extends Command {
-  /** Creates a new complexarm. */
+public class roller extends Command {
+  /** Creates a new roller. */
+  
+  private Intake sysIntake;
+  private double power;
+  
+  public roller(Intake subsytem, double dirac) {
 
-  private final  Arm sys_arm;
-  private final  double degree;
+     sysIntake=subsytem;
+     power=dirac;
 
-  public complexarm(Arm subsystem, double angle) {
-
-    sys_arm=subsystem;
-    degree=angle;
-  
-  
-   SmartDashboard.putNumber("angle", angle);
-  
-  
-    // Use addRequirements() here to declare subsystem dependencies.
-  
-    addRequirements(sys_arm); 
+    
+    addRequirements(subsytem);
+     // Use addRequirements() here to declare subsystem dependencies.
   }
-
 
   // Called when the command is initially scheduled.
   @Override
   public void initialize() {
-
-   sys_arm.Move2Angle(degree);
-
+   
+   sysIntake.Roller(power);
 
   }
 
@@ -45,20 +38,13 @@ public class complexarm extends Command {
   // Called once the command ends or is interrupted.
   @Override
   public void end(boolean interrupted) {
-  //sys_arm.Move2Angle(0);
-  //sys_arm.Move2Angle(degree);
 
+    sysIntake.Roller(0);
   }
 
   // Returns true when the command should end.
   @Override
   public boolean isFinished() {
-    return true;
+    return false;
   }
-
-   
-
-
-
-
 }

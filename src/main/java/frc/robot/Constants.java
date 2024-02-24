@@ -90,7 +90,7 @@ public final class Constants {
     // Wrist Mechanics
     public static final int ENCODER_CNT = 4096;
     public static final double WR_GR = 2.0;              // Gear Ratio between VP Output and intake hex shaft
-    public static final double WRIST_DEG2TIC = WR_GR * ENCODER_CNT / 360.0;        // Motor ticks per degrees of Wrist rotation
+    public static final double WRIST_DEG2TIC = (WR_GR * ENCODER_CNT)/360.0 ;        // Motor ticks per degrees of Wrist rotation
     public static final double INIT_POS = 180 * WRIST_DEG2TIC;    // 0 ref is inline with Arms (or deployed state)
     
     // PID Constants
@@ -122,6 +122,40 @@ public final class Constants {
   public static class k_SHOOTER {
     public static final int MotorID_TOP = 8;
     public static final int MotorID_BOT = 9;
-    
+    public static final double kP=6e-5;
+    public static final double kI=0;
+    public static final double kD=0;
+    public static final double kF=0.000015;
+    public static final double max_output=1;
+    public static final double min_output=-1;
+    public static final double max_rpm=5000;
+
   }
+
+
+   public static class k_SETPOINTS {
+   public static final double ARM_HOME=0;
+   public static final double WRIST_HOME=180;
+  
+  public static final double ARM_INTAKE=0; 
+  public static final double WRIST_INTAKE=0;
+  
+  public static final double ARM_SPEAKER=45;
+  public static final double WRIST_SPEAKER=-80;
+  
+  public static final double ARM_AMP=90;
+  public static final double WRIST_AMP=15;
+  
+  public static final double ARM_CLIMB=90;
+  public static final double WRIST_CLIMB=180;
+
+
+}
+
+
+
+
+
+
+
 }

@@ -29,6 +29,7 @@ public class Arm extends SubsystemBase {
 
   private final TalonSRX p775_Wrist = new TalonSRX(k_WRIST.MotorID_775);
 
+   private double armSP,wristSP;
   //private PositionVoltage positionControl = new PositionVoltage(0, 0, false, 0, 0, false, false, false);
   private MotionMagicVoltage arm_MMconfig = new MotionMagicVoltage(0, false, 0, 0, false, false, false);
 
@@ -90,7 +91,7 @@ public class Arm extends SubsystemBase {
     p775_Wrist.configFactoryDefault();
     p775_Wrist.setNeutralMode(NeutralMode.Brake);
     p775_Wrist.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);
-    p775_Wrist.setSensorPhase(true);   // Set so positive output drives increasing sensor values
+    p775_Wrist.setSensorPhase(false);   // Set so positive output drives increasing sensor values
     p775_Wrist.setInverted(false);           // Set so positive movement is up from deployed state
 
     // PID values
@@ -124,16 +125,23 @@ public class Arm extends SubsystemBase {
     double wrist_pos=p775_Wrist.getSelectedSensorPosition();
     SmartDashboard.putNumber("armposition",pos*360.0);
     SmartDashboard.putNumber("wrist position",wrist_pos/k_WRIST.WRIST_DEG2TIC);
+    SmartDashboard.putNumber("arm set point", armSP);
+    SmartDashboard.putNumber("wrist set point", wristSP);
+  
+  
+  
   }
 
   public void Move2Angle(double angle){
     //f500_Left.setControl(positionControl.withPosition(angle/360.0));
+   
     f500_Left.setControl(arm_MMconfig.withPosition(angle/360.0));
+    armSP=angle;  
   }
 
   public void MoveWrist(double angle){
     p775_Wrist.set(TalonSRXControlMode.MotionMagic, angle * k_WRIST.WRIST_DEG2TIC);
-    
+    wristSP=angle;
   }
 
   public void wristDC(double pctOutput){
@@ -146,4 +154,19 @@ public class Arm extends SubsystemBase {
   public void holden(){
     //do nothing
   }
+
+  public double get_wrist_position() {
+
+    return p775_Wrist.getSelectedSensorPosition()/k_WRIST.WRIST_DEG2TIC;
+
+  }
+
+  public double get_arm_position() {
+
+    return f500_Left.getPosition().getValue()*360.0;
+
+  }
+
+
+
 }
