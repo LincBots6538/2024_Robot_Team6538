@@ -1,0 +1,55 @@
+// Copyright (c) FIRST and other WPILib contributors.
+// Open Source Software; you can modify and/or share it under the terms of
+// the WPILib BSD license file in the root directory of this project.
+
+package frc.robot.commands.Autos;
+
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
+import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
+import edu.wpi.first.wpilibj2.command.WaitCommand;
+import frc.robot.Constants.k_SETPOINTS;
+import frc.robot.Constants.k_SHOOTER;
+import frc.robot.commands.Arm.ArmPose;
+import frc.robot.commands.Drive.AutoDrvStraight;
+import frc.robot.commands.Drive.AutoDrvTurn;
+import frc.robot.commands.Intake.SetRoller;
+import frc.robot.commands.Shooter.PrepShooter;
+import frc.robot.commands.Shooter.SetShooter;
+import frc.robot.commands.Shooter.Shoot;
+import frc.robot.subsystems.Arm;
+import frc.robot.subsystems.Drive;
+import frc.robot.subsystems.Intake;
+import frc.robot.subsystems.shooter;
+
+// NOTE:  Consider using this command inline, rather than writing a subclass.  For more
+// information, see:
+// https://docs.wpilib.org/en/stable/docs/software/commandbased/convenience-features.html
+public class AutoSideMove extends SequentialCommandGroup {
+  /** Creates a new AutoSideMove. */
+  public AutoSideMove(Drive drive_sys, Arm arm_sys, Intake intake_sys, shooter shooter_sys) {
+    // Add your commands in the addCommands() call, e.g.
+    // addCommands(new FooCommand(), new BarCommand());
+    double side = 1;
+    Alliance alliance = DriverStation.getAlliance().get();
+    if (alliance == Alliance.Blue)  side = -1;
+
+    addCommands(
+      new ParallelCommandGroup(
+        new ArmPose(arm_sys, k_SETPOINTS.ARM_SPEAKER_BW, k_SETPOINTS.WRIST_SPEAKER_BW),
+        new PrepShooter(shooter_sys, intake_sys, k_SHOOTER.SPEAKER_SPEED)
+      ),
+      new WaitCommand(0.1),
+      new Shoot(shooter_sys, intake_sys),
+      new WaitCommand(0.2),
+      new SetRoller(intake_sys, 0),
+      new SetShooter(shooter_sys, 0),
+      new ArmPose(arm_sys, k_SETPOINTS.ARM_HOME, k_SETPOINTS.WRIST_HOME),
+      new WaitCommand(6),
+      new AutoDrvStraight(drive_sys, 2),
+      new AutoDrvTurn(drive_sys, side * 60),
+      new AutoDrvStraight(drive_sys, 8)
+    );
+  }
+}

@@ -11,7 +11,6 @@ import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
-//import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
@@ -29,8 +28,15 @@ public class Arm extends SubsystemBase {
 
   private final TalonSRX p775_Wrist = new TalonSRX(k_WRIST.MotorID_775);
 
-   private double armSP,wristSP;
-  //private PositionVoltage positionControl = new PositionVoltage(0, 0, false, 0, 0, false, false, false);
+  private double  armSP,        // Desired Arm Set Point
+                  wristSP,      // Desired Wrist Set Point
+                  armSP_cur,    // Current Arm Set Point
+                  wristSP_cur,  // Current Wrist Set Point
+                  pos,          // Current Arm Position
+                  wrist_pos;    // Current Wrist Postion
+  private boolean armPAUSED = false,
+                  wristPAUSED = false;
+
   private MotionMagicVoltage arm_MMconfig = new MotionMagicVoltage(0, false, 0, 0, false, false, false);
 
 
@@ -73,6 +79,7 @@ public class Arm extends SubsystemBase {
     leftConfig.MotionMagic.MotionMagicCruiseVelocity = k_ARM.ARM_CRUISE;  // 1 second to 90 deg
     leftConfig.MotionMagic.MotionMagicAcceleration = k_ARM.ARM_ACCEL;     // Time to reach velocity
     leftConfig.MotionMagic.MotionMagicJerk = k_ARM.ARM_JERK;              // Time to reach accel
+    
 
     
    
@@ -121,24 +128,74 @@ public class Arm extends SubsystemBase {
   @Override
   public void periodic() {
     // This method will be called once per scheduler run
-    double pos=f500_Left.getPosition().getValue();
-    double wrist_pos=p775_Wrist.getSelectedSensorPosition();
-    SmartDashboard.putNumber("armposition",pos*360.0);
-    SmartDashboard.putNumber("wrist position",wrist_pos/k_WRIST.WRIST_DEG2TIC);
-    SmartDashboard.putNumber("arm set point", armSP);
-    SmartDashboard.putNumber("wrist set point", wristSP);
+    // Update Position Varibles 
+    pos=f500_Left.getPosition().getValue()*360.0;
+    wrist_pos=p775_Wrist.getSelectedSensorPosition()/k_WRIST.WRIST_DEG2TIC;
+    // get Current target postions
+    armSP_cur = arm_MMconfig.Position * 360.0;
+    wristSP_cur = p775_Wrist.getClosedLoopTarget()/k_WRIST.WRIST_DEG2TIC;
+
+    // Update Dashboard
+    SmartDashboard.putNumber("armposition",pos);
+    SmartDashboard.putNumber("wrist position",wrist_pos);
+    SmartDashboard.putNumber("arm set point", armSP_cur);
+    SmartDashboard.putNumber("wrist set point", wristSP_cur);
   
-  
-  
+    //#region Crash Protection
+
+    // Invalid Positions
+    // If set Point would crash, stop
+    if ((armSP < 38) && (wristSP < 0)){   
+      armSP = pos;
+      wristSP = wrist_pos;
+      Move2Angle(armSP);
+      MoveWrist(wristSP);
+    }
+
+    // If Arm is to far back = Stop
+    if(pos > 95){
+      armSP = pos;
+      wristSP = wrist_pos;
+      Move2Angle(armSP);
+      MoveWrist(wristSP);
+    }
+
+
+    // Move Order
+    // While Arm is low & wrist set point is negative, Set wrist positive
+    if (pos < 38 && wristSP_cur < 0){
+      wristPAUSED = true;
+      p775_Wrist.set(TalonSRXControlMode.MotionMagic, 5 * k_WRIST.WRIST_DEG2TIC);
+    }
+    // While Wrist is negative & Arm wants to go Low, Move wrist
+    if (wrist_pos < -2 && armSP_cur < 38){
+      armPAUSED = true;
+      f500_Left.setControl(arm_MMconfig.withPosition(pos / 360.0));
+    }
+
+    // If Arm is done, Unpause Wrist
+    if (wristPAUSED && IsArmStopped()) {
+      MoveWrist(wristSP);
+      wristPAUSED = false;
+    }
+    // If Wrist is done, Unpause Arm
+    if (armPAUSED && IsWristStopped()) {
+      Move2Angle(armSP);
+      armPAUSED = false;
+      
+    }
+    //#endregion
   }
 
+  /** Moves the Arm Shoulder Joint
+   *  @param angle - Angle to move, in degrees */
   public void Move2Angle(double angle){
-    //f500_Left.setControl(positionControl.withPosition(angle/360.0));
-   
     f500_Left.setControl(arm_MMconfig.withPosition(angle/360.0));
     armSP=angle;  
   }
 
+  /** Moves the Wrist Joint
+   *  @param angle - Angle to move, in degrees */
   public void MoveWrist(double angle){
     p775_Wrist.set(TalonSRXControlMode.MotionMagic, angle * k_WRIST.WRIST_DEG2TIC);
     wristSP=angle;
@@ -155,18 +212,50 @@ public class Arm extends SubsystemBase {
     //do nothing
   }
 
+  public boolean IsStopped(){
+    boolean arm = (Math.abs(f500_Left.getVelocity().getValueAsDouble()) * 360.0 < 1.0);
+    boolean wrist = (Math.abs(p775_Wrist.getSelectedSensorVelocity() / k_WRIST.WRIST_DEG2TIC) < 1.0);
+    return (arm && wrist);
+  }
+
+  private boolean IsArmStopped(){
+    //boolean arm = (Math.abs(f500_Left.getVelocity().getValueAsDouble()) * 360.0 < 1.0);
+    boolean arm = (Math.abs(armSP-pos) < 5);
+    return (arm);
+  }
+
+  private boolean IsWristStopped(){
+    //boolean wrist = (Math.abs(p775_Wrist.getSelectedSensorVelocity() / k_WRIST.WRIST_DEG2TIC) < 1.0);
+    boolean wrist = (Math.abs(wristSP-wrist_pos) < 5);
+    return (wrist);
+  }
+
+  public boolean IsAtTarget(){
+    return ((Math.abs(armSP-pos) < 5) && (Math.abs(wristSP-wrist_pos) < 5));
+  }
+  
+
   public double get_wrist_position() {
-
-    return p775_Wrist.getSelectedSensorPosition()/k_WRIST.WRIST_DEG2TIC;
-
+    return wrist_pos;
   }
 
   public double get_arm_position() {
-
-    return f500_Left.getPosition().getValue()*360.0;
-
+    return pos;
   }
 
+  public void resetSensors(){
+    f500_Left.setPosition(k_ARM.INIT_POS);
+    p775_Wrist.setSelectedSensorPosition(k_WRIST.INIT_POS);
+  }
+
+  public boolean Arm10(){
+    if (pos > 10){
+      return true;
+    } else {
+      return false;
+    }
+
+  }
 
 
 }

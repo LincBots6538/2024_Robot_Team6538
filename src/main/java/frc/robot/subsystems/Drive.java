@@ -6,10 +6,11 @@ package frc.robot.subsystems;
 
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
-import com.ctre.phoenix6.controls.PositionVoltage;
-import com.ctre.phoenix6.controls.VelocityVoltage;
+import com.ctre.phoenix6.controls.MotionMagicVelocityVoltage;
+import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
+import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -24,21 +25,25 @@ public class Drive extends SubsystemBase {
   private TalonFX f500_fl_drive = new TalonFX(k_DRIVE.MotorID_FL);
   private TalonFX f500_rl_drive = new TalonFX(k_DRIVE.MotorID_RL);
 
-  // Velocity Control Setttings
-  private VelocityVoltage l_velocityControl = new VelocityVoltage(0, 0, false, 0, 0, false, false, false);
-  private VelocityVoltage r_velocityControl = new VelocityVoltage(0, 0, false, 0, 0, false, false, false);
-  
-  // Position Control Settings
-  private PositionVoltage l_positionControl = new PositionVoltage(0, 0, false, 0, 1, false, false, false);
-  private PositionVoltage r_positionControl = new PositionVoltage(0, 0, false, 0, 1, false, false, false);
+  private MotionMagicVelocityVoltage l_velocityControl = new MotionMagicVelocityVoltage(0, k_DRIVE.MM_ACCEL, false, 0, 0, false, false, false);
+  private MotionMagicVelocityVoltage r_velocityControl = new MotionMagicVelocityVoltage(0, k_DRIVE.MM_ACCEL, false, 0, 0, false, false, false);
+
+  // Motion Magic Postion Settings
+  private MotionMagicVoltage l_positionControl = new MotionMagicVoltage(0, false, 0, 1, true, false, false);
+  private MotionMagicVoltage r_positionControl = new MotionMagicVoltage(0, false, 0, 1, true, false, false);
 
   // Status Varibles
-  private double l_position, r_position, l_velocity, r_velocity;
+  private double  l_position = 0, 
+                  r_position = 0, 
+                  l_velocity = 0, 
+                  r_velocity = 0, 
+                  abs_left_target, 
+                  abs_right_target;
 
   public Drive() {
     // Config Motors
-    var leftConfig = new TalonFXConfiguration();
-    var rightConfig = new TalonFXConfiguration();
+    TalonFXConfiguration leftConfig = new TalonFXConfiguration();
+    TalonFXConfiguration rightConfig = new TalonFXConfiguration();
     
     // Set forward as positive
     leftConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;  // As seen faceing motor output shaft
@@ -67,7 +72,16 @@ public class Drive extends SubsystemBase {
     rightConfig.Slot1.kD = k_DRIVE.KD_1;
     rightConfig.Slot1.kV = k_DRIVE.KF_1;
     //#endregion
+    
+    // Motion Magic Position Setting
+    
+    leftConfig.MotionMagic.MotionMagicCruiseVelocity = k_DRIVE.MM_CRUISE;
+    leftConfig.MotionMagic.MotionMagicAcceleration = k_DRIVE.MM_POS_ACCEL;
+    leftConfig.MotionMagic.MotionMagicJerk = k_DRIVE.MM_JERK;
 
+    rightConfig.MotionMagic.MotionMagicCruiseVelocity = k_DRIVE.MM_CRUISE;
+    rightConfig.MotionMagic.MotionMagicAcceleration = k_DRIVE.MM_POS_ACCEL;
+    rightConfig.MotionMagic.MotionMagicJerk = k_DRIVE.MM_JERK;
 
     // Apply Configs
     f500_fl_drive.getConfigurator().apply(leftConfig);
@@ -75,6 +89,12 @@ public class Drive extends SubsystemBase {
     f500_fr_drive.getConfigurator().apply(rightConfig);
     f500_rr_drive.getConfigurator().apply(rightConfig);
 
+    // Neutral Mode
+    f500_fl_drive.setNeutralMode(NeutralModeValue.Coast);
+    f500_fr_drive.setNeutralMode(NeutralModeValue.Coast);
+    f500_rl_drive.setNeutralMode(NeutralModeValue.Coast);
+    f500_rr_drive.setNeutralMode(NeutralModeValue.Coast);
+    
     // Set rear Motors to follow the front
     f500_rl_drive.setControl(new Follower(f500_fl_drive.getDeviceID(), false));
     f500_rr_drive.setControl(new Follower(f500_fr_drive.getDeviceID(), false));
@@ -82,49 +102,48 @@ public class Drive extends SubsystemBase {
     f500_fl_drive.setPosition(0);
     f500_fr_drive.setPosition(0);
     
-    l_position = f500_fl_drive.getPosition().getValue();
-    r_position = f500_fr_drive.getPosition().getValue();
-    l_velocity = f500_fl_drive.getVelocity().getValue();
-    r_velocity = f500_fr_drive.getVelocity().getValue();
-
-
   }
 
   @Override
   public void periodic() {
     // This method will be called once per scheduler run
-    l_position = f500_fl_drive.getPosition().getValue();
-    r_position = f500_fr_drive.getPosition().getValue();
-    l_velocity = f500_fl_drive.getVelocity().getValue();
-    r_velocity = f500_fr_drive.getVelocity().getValue();
-    SmartDashboard.putNumber("Left Velocity", l_velocity);
-    SmartDashboard.putNumber("Right Velocity", r_velocity);
 
-  }
+    // Update Speed & position Variables
+    l_position = f500_fl_drive.getPosition().getValueAsDouble();
+    r_position = f500_fr_drive.getPosition().getValueAsDouble();
+    l_velocity = f500_fl_drive.getVelocity().getValueAsDouble();
+    r_velocity = f500_fr_drive.getVelocity().getValueAsDouble();
 
-  public void RadiusDrive(double pwr, double turn){
-    // Turning differential is calculated to drive a given turning radius, Positive direction to the right, positiive must be positive
-    
-    double l_sca = 1 - (Math.abs(turn)-turn);
-    double r_sca = 1 - (Math.abs(turn)+turn);
-    // set velocity setpoint for each side
-    f500_fl_drive.setControl(l_velocityControl.withVelocity(pwr * l_sca * k_DRIVE.MAX_SPEED_MTR));
-    f500_fr_drive.setControl(r_velocityControl.withVelocity(pwr * r_sca * k_DRIVE.MAX_SPEED_MTR));
-    
+    // Update Dashboard
+    SmartDashboard.putNumber("Left Velocity", l_velocity / k_DRIVE.FT_TO_MROT);
+    SmartDashboard.putNumber("Right Velocity", r_velocity / k_DRIVE.FT_TO_MROT);
+    SmartDashboard.putNumber("Left Position", l_position / k_DRIVE.FT_TO_MROT);
+    SmartDashboard.putNumber("Right Position", r_position / k_DRIVE.FT_TO_MROT);
+    SmartDashboard.putNumber("Left Target", abs_left_target / k_DRIVE.FT_TO_MROT);
+    SmartDashboard.putNumber("Right Target", abs_right_target / k_DRIVE.FT_TO_MROT);
+
   }
 
   public void PositionDrive(double right_target, double left_target){
     // Move drive by incremental target (in feet)
 
-    double abs_left_target = l_position + (left_target * k_DRIVE.FT_TO_MROT);    // target in motor rotations
-    double abs_right_target = r_position + (right_target * k_DRIVE.FT_TO_MROT);  // target in motor rotations
+    abs_left_target = l_position + (left_target * k_DRIVE.FT_TO_MROT);    // target in motor rotations
+    abs_right_target = r_position + (right_target * k_DRIVE.FT_TO_MROT);  // target in motor rotations
 
     // Set the position setpoint for each side
-    f500_fl_drive.setControl(l_positionControl.withVelocity(abs_left_target));
-    f500_fr_drive.setControl(r_positionControl.withVelocity(abs_right_target));
+    f500_fl_drive.setControl(l_positionControl.withPosition(abs_left_target));
+    f500_fr_drive.setControl(r_positionControl.withPosition(abs_right_target));
   }
 
-   public void holdendrive (double speed,double angle ){
+  public boolean PostionOnTarget(){
+    boolean left = (Math.abs(abs_left_target-l_position) < k_DRIVE.POS_ERR);
+    boolean right = (Math.abs(abs_right_target-r_position) < k_DRIVE.POS_ERR);
+    boolean speed = ((l_velocity < 10) && (r_velocity < 10));
+
+    return ((left && right) && (speed));
+  }
+
+  public void holdendrive (double speed,double angle ){
     // Limit Motor values to -1 to 1
     double left_motor_value = MathUtil.clamp((speed+angle), -1, 1);
     double right_motor_value = MathUtil.clamp((speed-angle), -1, 1);
@@ -132,13 +151,12 @@ public class Drive extends SubsystemBase {
     // Set Motor Speed Values
     f500_fl_drive.setControl(l_velocityControl.withVelocity(left_motor_value*k_DRIVE.MAX_SPEED_MTR));
     f500_fr_drive.setControl(r_velocityControl.withVelocity(right_motor_value*k_DRIVE.MAX_SPEED_MTR));
-   }
+  }
+
+  // Lock the Drive Wheels
+  public void PositionLock(){
+    f500_fl_drive.setControl(l_positionControl.withPosition(l_position));
+    f500_fr_drive.setControl(r_positionControl.withPosition(r_position));
+  }
    
-
-
-
-
-
-
-
 }
